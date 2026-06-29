@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Weather Widget Example</title>
+    <style>
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f4f4f5;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      class="weather-widget"
+      data-api="http://127.0.0.1:5000"
+      data-city="Lisboa">
+    </div>
+
+    <script src="./widget.js"></script>
+  </body>
+</html>

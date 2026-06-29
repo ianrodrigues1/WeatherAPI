@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Weather API & Widget</title>
+    <meta
+      name="description"
+      content="Microservico Flask para consulta de clima atual, API REST publica e widget incorporavel."
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #070707;
+        --panel: #0d0d10;
+        --panel-soft: #121216;
+        --text: #f8fafc;
+        --muted: #a1a1aa;
+        --line: rgba(255, 255, 255, 0.1);
+        --accent: #2dd4bf;
+        --accent-strong: #14b8a6;
+        --danger: #fca5a5;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 20% 10%, rgba(45, 212, 191, 0.11), transparent 28rem),
+          linear-gradient(180deg, #0a0a0b 0%, var(--bg) 52%, #050505 100%);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .page {
+        width: min(1120px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 48px;
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 14px 0 34px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 15px;
+        font-weight: 700;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 16px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+        gap: 24px;
+        align-items: start;
+      }
+
+      .intro {
+        padding-top: 36px;
+      }
+
+      .eyebrow {
+        margin: 0 0 14px;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        max-width: 760px;
+        margin: 0;
+        font-size: clamp(42px, 7vw, 76px);
+        line-height: 0.96;
+        letter-spacing: 0;
+      }
+
+      .lead {
+        max-width: 620px;
+        margin: 22px 0 0;
+        color: var(--muted);
+        font-size: 18px;
+        line-height: 1.65;
+      }
+
+      .search-panel,
+      .docs-panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(13, 13, 16, 0.82);
+        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+        backdrop-filter: blur(18px);
+      }
+
+      .search-panel {
+        padding: 20px;
+      }
+
+      .search-form {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+      }
+
+      .search-field {
+        position: relative;
+      }
+
+      input,
+      button {
+        min-height: 46px;
+        border-radius: 8px;
+        font: inherit;
+      }
+
+      input {
+        width: 100%;
+        border: 1px solid var(--line);
+        padding: 0 14px;
+        color: var(--text);
+        background: #09090b;
+        outline: none;
+      }
+
+      input:focus {
+        border-color: rgba(45, 212, 191, 0.7);
+        box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.12);
+      }
+
+      button {
+        border: 0;
+        padding: 0 18px;
+        color: #001f1c;
+        background: var(--accent);
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background: var(--accent-strong);
+      }
+
+      button:disabled {
+        cursor: wait;
+        opacity: 0.7;
+      }
+
+      .suggestions {
+        position: absolute;
+        z-index: 10;
+        top: calc(100% + 8px);
+        left: 0;
+        right: 0;
+        display: grid;
+        gap: 4px;
+        max-height: 260px;
+        overflow-y: auto;
+        margin: 0;
+        padding: 8px;
+        list-style: none;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #09090b;
+        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.42);
+      }
+
+      .suggestions[hidden] {
+        display: none;
+      }
+
+      .suggestion-button {
+        display: block;
+        width: 100%;
+        min-height: 42px;
+        padding: 9px 10px;
+        border: 1px solid transparent;
+        color: var(--text);
+        background: transparent;
+        text-align: left;
+        font-weight: 650;
+      }
+
+      .suggestion-button:hover,
+      .suggestion-button.active {
+        border-color: rgba(45, 212, 191, 0.35);
+        color: var(--text);
+        background: rgba(45, 212, 191, 0.09);
+      }
+
+      .suggestion-meta {
+        display: block;
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .status {
+        min-height: 24px;
+        margin: 14px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .status.error {
+        color: var(--danger);
+      }
+
+      .weather-card {
+        display: none;
+        margin-top: 18px;
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel-soft);
+      }
+
+      .weather-card.visible {
+        display: block;
+      }
+
+      .weather-head {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: 18px;
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 18px;
+      }
+
+      .city {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1.15;
+      }
+
+      .country {
+        margin-top: 5px;
+        color: var(--muted);
+      }
+
+      .temperature {
+        font-size: 52px;
+        line-height: 1;
+        font-weight: 850;
+      }
+
+      .weather-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .metric {
+        min-height: 76px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #0a0a0c;
+      }
+
+      .metric span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 8px;
+        font-size: 17px;
+        text-transform: capitalize;
+      }
+
+      .docs {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 26px;
+      }
+
+      .docs-panel {
+        padding: 18px;
+      }
+
+      .docs-panel h2 {
+        margin: 0 0 12px;
+        font-size: 15px;
+      }
+
+      .widget-preview {
+        display: grid;
+        place-items: start;
+        margin-bottom: 14px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #050506;
+      }
+
+      pre {
+        overflow-x: auto;
+        margin: 0;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        color: #d4d4d8;
+        background: #050506;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      code {
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      }
+
+      @media (max-width: 840px) {
+        .hero,
+        .docs {
+          grid-template-columns: 1fr;
+        }
+
+        .intro {
+          padding-top: 10px;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .page {
+          width: min(100% - 24px, 1120px);
+          padding-top: 14px;
+        }
+
+        .nav {
+          align-items: flex-start;
+          flex-direction: column;
+          padding-bottom: 24px;
+        }
+
+        .search-form {
+          grid-template-columns: 1fr;
+        }
+
+        .weather-head {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .weather-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <nav class="nav" aria-label="Principal">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">WX</span>
+          Weather API & Widget
+        </div>
+        <div class="nav-links">
+          <a href="#api">API</a>
+          <a href="/widget.js">Widget</a>
+        </div>
+      </nav>
+
+      <section class="hero">
+        <div class="intro">
+          <p class="eyebrow">Microservico Flask + widget incorporavel</p>
+          <h1>Clima atual com busca por sugestoes.</h1>
+          <p class="lead">
+            Consulte cidades pelo nome parcial, escolha uma sugestao e use os mesmos dados por uma
+            API REST simples, cacheada e pronta para qualquer projeto.
+          </p>
+        </div>
+
+        <section class="search-panel" aria-label="Consulta de clima">
+          <form class="search-form" id="weather-form">
+            <div class="search-field">
+              <label class="sr-only" for="city-input">Cidade</label>
+              <input
+                id="city-input"
+                name="city"
+                placeholder="Comece a digitar uma cidade"
+                autocomplete="off"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded="false"
+                aria-controls="city-suggestions"
+              />
+              <ul class="suggestions" id="city-suggestions" role="listbox" hidden></ul>
+            </div>
+            <button id="submit-button" type="submit">Consultar</button>
+          </form>
+
+          <p class="status" id="status" role="status"></p>
+
+          <article class="weather-card" id="weather-card" aria-live="polite">
+            <div class="weather-head">
+              <div>
+                <h2 class="city" id="weather-city"></h2>
+                <div class="country" id="weather-country"></div>
+              </div>
+              <div class="temperature" id="weather-temperature"></div>
+            </div>
+
+            <div class="weather-grid">
+              <div class="metric">
+                <span>Sensacao termica</span>
+                <strong id="weather-feels-like"></strong>
+              </div>
+              <div class="metric">
+                <span>Condicao</span>
+                <strong id="weather-condition"></strong>
+              </div>
+              <div class="metric">
+                <span>Umidade</span>
+                <strong id="weather-humidity"></strong>
+              </div>
+              <div class="metric">
+                <span>Vento</span>
+                <strong id="weather-wind"></strong>
+              </div>
+              <div class="metric">
+                <span>Consulta</span>
+                <strong id="weather-timestamp"></strong>
+              </div>
+            </div>
+          </article>
+        </section>
+      </section>
+
+      <section class="docs" id="api" aria-label="Exemplos de uso">
+        <div class="docs-panel">
+          <h2>Endpoint REST</h2>
+          <pre><code>GET /api/weather?city={cidade}
+GET /api/cities?query={texto}</code></pre>
+        </div>
+
+        <div class="docs-panel">
+          <h2>Widget embed</h2>
+          <div class="widget-preview" aria-label="Previa do widget incorporavel">
+            <div class="weather-widget" data-city="Lisboa" data-compact="true"></div>
+          </div>
+          <pre><code>&lt;script src="https://sua-api.com/widget.js"&gt;&lt;/script&gt;
+
+&lt;div
+  class="weather-widget"
+  data-city="Lisboa"&gt;
+&lt;/div&gt;</code></pre>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const form = document.querySelector("#weather-form");
+      const input = document.querySelector("#city-input");
+      const button = document.querySelector("#submit-button");
+      const statusEl = document.querySelector("#status");
+      const card = document.querySelector("#weather-card");
+      const suggestionsEl = document.querySelector("#city-suggestions");
+
+      const fields = {
+        city: document.querySelector("#weather-city"),
+        country: document.querySelector("#weather-country"),
+        temperature: document.querySelector("#weather-temperature"),
+        feelsLike: document.querySelector("#weather-feels-like"),
+        condition: document.querySelector("#weather-condition"),
+        humidity: document.querySelector("#weather-humidity"),
+        wind: document.querySelector("#weather-wind"),
+        timestamp: document.querySelector("#weather-timestamp"),
+      };
+
+      let suggestions = [];
+      let selectedSuggestion = null;
+      let activeSuggestionIndex = -1;
+      let suggestionTimer = null;
+
+      function setStatus(message, isError = false) {
+        statusEl.textContent = message;
+        statusEl.classList.toggle("error", isError);
+      }
+
+      function formatTimestamp(timestamp) {
+        return new Intl.DateTimeFormat("pt-BR", {
+          dateStyle: "short",
+          timeStyle: "short",
+        }).format(new Date(timestamp));
+      }
+
+      function renderWeather(weather) {
+        fields.city.textContent = weather.city;
+        fields.country.textContent = weather.country;
+        fields.temperature.textContent = `${weather.temperature}°C`;
+        fields.feelsLike.textContent = `${weather.feels_like}°C`;
+        fields.condition.textContent = weather.condition;
+        fields.humidity.textContent = `${weather.humidity}%`;
+        fields.wind.textContent = `${weather.wind_speed} km/h`;
+        fields.timestamp.textContent = formatTimestamp(weather.timestamp);
+        card.classList.add("visible");
+      }
+
+      function hideSuggestions() {
+        suggestionsEl.hidden = true;
+        input.setAttribute("aria-expanded", "false");
+        input.removeAttribute("aria-activedescendant");
+        activeSuggestionIndex = -1;
+      }
+
+      function setActiveSuggestion(index) {
+        activeSuggestionIndex = index;
+
+        suggestionsEl.querySelectorAll(".suggestion-button").forEach((item, itemIndex) => {
+          item.classList.toggle("active", itemIndex === activeSuggestionIndex);
+        });
+
+        if (activeSuggestionIndex >= 0) {
+          input.setAttribute("aria-activedescendant", `city-option-${activeSuggestionIndex}`);
+        } else {
+          input.removeAttribute("aria-activedescendant");
+        }
+      }
+
+      function renderSuggestions(items) {
+        suggestions = items;
+        suggestionsEl.innerHTML = "";
+
+        if (!suggestions.length) {
+          hideSuggestions();
+          return;
+        }
+
+        suggestions.forEach((suggestion, index) => {
+          const option = document.createElement("li");
+          const optionButton = document.createElement("button");
+          const meta = document.createElement("span");
+
+          option.id = `city-option-${index}`;
+          option.role = "option";
+
+          optionButton.type = "button";
+          optionButton.className = "suggestion-button";
+          optionButton.textContent = suggestion.name;
+          optionButton.addEventListener("click", () => selectSuggestion(suggestion));
+
+          meta.className = "suggestion-meta";
+          meta.textContent = [suggestion.state, suggestion.country].filter(Boolean).join(", ");
+
+          optionButton.appendChild(meta);
+          option.appendChild(optionButton);
+          suggestionsEl.appendChild(option);
+        });
+
+        suggestionsEl.hidden = false;
+        input.setAttribute("aria-expanded", "true");
+        setActiveSuggestion(-1);
+      }
+
+      async function fetchSuggestions(query) {
+        const response = await fetch(`/api/cities?query=${encodeURIComponent(query)}`);
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload.message || "Nao foi possivel buscar sugestoes.");
+        }
+
+        return payload.suggestions || [];
+      }
+
+      async function updateSuggestions() {
+        const query = input.value.trim();
+
+        if (query.length < 2) {
+          hideSuggestions();
+          return;
+        }
+
+        try {
+          const items = await fetchSuggestions(query);
+
+          if (input.value.trim() !== query) {
+            return;
+          }
+
+          renderSuggestions(items);
+          setStatus("");
+        } catch (error) {
+          hideSuggestions();
+          setStatus(error.message, true);
+        }
+      }
+
+      function buildWeatherUrl(selection) {
+        const params = new URLSearchParams();
+
+        if (typeof selection === "string") {
+          params.set("city", selection);
+        } else {
+          params.set("city", selection.name);
+          params.set("lat", selection.lat);
+          params.set("lon", selection.lon);
+
+          if (selection.country_code) {
+            params.set("country", selection.country_code);
+          }
+        }
+
+        return `/api/weather?${params.toString()}`;
+      }
+
+      async function fetchWeather(selection) {
+        const response = await fetch(buildWeatherUrl(selection));
+        const payload = await response.json();
+
+        if (!response.ok) {
+          throw new Error(payload.message || "Nao foi possivel consultar o clima.");
+        }
+
+        return payload;
+      }
+
+      async function loadWeather(selection) {
+        button.disabled = true;
+        setStatus("Consultando clima...");
+
+        try {
+          const weather = await fetchWeather(selection);
+          renderWeather(weather);
+          setStatus("Dados atualizados com sucesso.");
+        } catch (error) {
+          card.classList.remove("visible");
+          setStatus(error.message, true);
+        } finally {
+          button.disabled = false;
+        }
+      }
+
+      function selectSuggestion(suggestion) {
+        selectedSuggestion = suggestion;
+        input.value = suggestion.label;
+        hideSuggestions();
+        loadWeather(suggestion);
+      }
+
+      input.addEventListener("input", () => {
+        clearTimeout(suggestionTimer);
+        suggestionTimer = setTimeout(updateSuggestions, 100);
+      });
+
+      input.addEventListener("keydown", (event) => {
+        if (suggestionsEl.hidden || !suggestions.length) {
+          return;
+        }
+
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          setActiveSuggestion((activeSuggestionIndex + 1) % suggestions.length);
+        }
+
+        if (event.key === "ArrowUp") {
+          event.preventDefault();
+          setActiveSuggestion(
+            activeSuggestionIndex <= 0 ? suggestions.length - 1 : activeSuggestionIndex - 1
+          );
+        }
+
+        if (event.key === "Enter" && activeSuggestionIndex >= 0) {
+          event.preventDefault();
+          selectSuggestion(suggestions[activeSuggestionIndex]);
+        }
+
+        if (event.key === "Escape") {
+          hideSuggestions();
+        }
+      });
+
+      input.addEventListener("blur", () => {
+        window.setTimeout(hideSuggestions, 200);
+      });
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const city = input.value.trim();
+
+        if (!city) {
+          setStatus("Digite uma cidade para consultar.", true);
+          card.classList.remove("visible");
+          return;
+        }
+
+        hideSuggestions();
+        await loadWeather(selectedSuggestion || city);
+      });
+    </script>
+    <script src="/widget.js"></script>
+  </body>
+</html>
